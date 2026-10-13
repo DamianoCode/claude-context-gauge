@@ -19,6 +19,7 @@ const LABEL: Record<string, string> = {
   'System prompt': 'system',
   'System tools': 'narzędzia',
   'MCP tools': 'MCP',
+  'MCP server instructions': 'instrukcje MCP',
   'Custom agents': 'agenci',
   'Memory files': 'pamięć',
   Skills: 'skille',
@@ -210,8 +211,8 @@ export const register: Register = (on, options) => {
     const figures = ` ${fmt(g.used)}/${fmt(g.max)} ${pct}%`
     const tail = `  ${cache.text}  `
     const room = e.props.bodyColumns - 2 * PAD - figures.length - tail.length
-    const hasButton = room - 1 >= 12
-    const width = Math.max(4, hasButton ? room - 1 : room)
+    const hasButton = room - 3 >= 12
+    const width = Math.max(4, hasButton ? room - 3 : room)
     const widths = cells(g.segments, width)
 
     return (
@@ -230,7 +231,7 @@ export const register: Register = (on, options) => {
           <Text color={cache.tone}>{tail}</Text>
           {hasButton ? (
             <Button key="details" plain onPress={() => openPane($)}>
-              <Text color="claude">≡</Text>
+              <Text color="claude"> ≡ </Text>
             </Button>
           ) : null}
         </Box>
