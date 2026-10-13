@@ -54,13 +54,13 @@ export const cells = (segments: Segment[], width: number): number[] => {
 }
 
 export const cacheView = (last: number | null, t: number, ttlMs: number) => {
-  if (last === null) return { text: '◷ cache —', tone: 'inactive' }
+  if (last === null) return { text: '◷ —', tone: 'inactive' }
   const left = last + ttlMs - t
-  if (left <= 0) return { text: '◌ cache zamrożony', tone: 'inactive' }
+  if (left <= 0) return { text: '◌ 0:00', tone: 'inactive' }
   const s = Math.ceil(left / 1000)
   const time = left >= 10 * MIN ? `${Math.floor(left / MIN)} min` : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
   const tone = left < 2 * MIN ? 'error' : left < 10 * MIN ? 'warning' : 'success'
-  return { text: `◷ cache ${time}`, tone }
+  return { text: `◷ ${time}`, tone }
 }
 
 const segmentsOf = (b: SessionContextBreakdown): Segment[] =>
@@ -81,7 +81,7 @@ const gaugeOf = (u: SessionUsage): Gauge => {
   }
 }
 
-const top = (items: Consumer[], n = 5) => items.filter(x => x.tokens > 0).sort((a, b) => b.tokens - a.tokens).slice(0, n)
+const sorted = (items: Consumer[]) => items.filter(x => x.tokens > 0).sort((a, b) => b.tokens - a.tokens)
 
 const shortPath = (path: string) => path.split(/[\\/]/).slice(-2).join('/')
 
@@ -91,10 +91,10 @@ const detailsOf = (b: SessionContextBreakdown, isFull: boolean): Details => {
     if (tool.isLoaded) servers.set(tool.serverName, (servers.get(tool.serverName) ?? 0) + tool.tokens)
   }
   const groups = [
-    { title: 'Pliki pamięci', items: top(b.memoryFiles.map(f => ({ name: shortPath(f.path), tokens: f.tokens }))) },
-    { title: 'Serwery MCP', items: top([...servers].map(([name, tokens]) => ({ name, tokens }))) },
-    { title: 'Skille', items: top((b.skills?.skillFrontmatter ?? []).map(s => ({ name: s.name, tokens: s.tokens }))) },
-    { title: 'Agenci', items: top(b.agents.map(a => ({ name: a.agentType, tokens: a.tokens }))) },
+    { title: 'Pliki pamięci', items: sorted(b.memoryFiles.map(f => ({ name: shortPath(f.path), tokens: f.tokens }))) },
+    { title: 'Serwery MCP', items: sorted([...servers].map(([name, tokens]) => ({ name, tokens }))) },
+    { title: 'Skille', items: sorted((b.skills?.skillFrontmatter ?? []).map(s => ({ name: s.name, tokens: s.tokens }))) },
+    { title: 'Agenci', items: sorted(b.agents.map(a => ({ name: a.agentType, tokens: a.tokens }))) },
   ].filter(g => g.items.length > 0)
   return { model: b.model, isFull, used: b.totalTokens, max: b.rawMaxTokens, segments: segmentsOf(b), groups }
 }
@@ -202,26 +202,22 @@ export const register: Register = (on, options) => {
 
     const { Box, Text, Button } = $.ui.resolve(e)
     const cache = e.props.isWorking
-      ? { text: '◷ cache aktywny', tone: 'success' }
+      ? { text: '◷ ●', tone: 'success' }
       : cacheView(await read($, lastResponseAt), await read($, now), ttlMs)
     const pct = Math.round((g.used / g.max) * 100)
     const tone = pct >= 90 ? 'error' : pct >= 70 ? 'warning' : undefined
 
-    const head = `◆ ctx ${fmt(g.used)}/${fmt(g.max)} ${pct}% `
-    const tail = ` ${cache.text} `
-    const room = e.props.bodyColumns - 2 * PAD - head.length - tail.length
-    const button = '[ Szczegóły ]'
-    const hasButton = room - button.length >= 12
-    const width = Math.max(4, hasButton ? room - button.length : room)
+    const figures = ` ${fmt(g.used)}/${fmt(g.max)} ${pct}%`
+    const tail = `  ${cache.text}  `
+    const room = e.props.bodyColumns - 2 * PAD - figures.length - tail.length
+    const hasButton = room - 1 >= 12
+    const width = Math.max(4, hasButton ? room - 1 : room)
     const widths = cells(g.segments, width)
 
     return (
       <Box flexDirection="column">
         {inner}
         <Box paddingX={PAD} paddingTop={1}>
-          <Text color="claude" bold>◆ ctx </Text>
-          <Text bold>{fmt(g.used)}/{fmt(g.max)} </Text>
-          <Text color={tone} bold={tone !== undefined}>{pct}% </Text>
           {g.segments.map((s, i) =>
             widths[i] ? (
               <Text key={`seg-${i}`} color={s.color}>
@@ -229,8 +225,14 @@ export const register: Register = (on, options) => {
               </Text>
             ) : null,
           )}
+          <Text bold> {fmt(g.used)}/{fmt(g.max)} </Text>
+          <Text color={tone} bold={tone !== undefined}>{pct}%</Text>
           <Text color={cache.tone}>{tail}</Text>
-          {hasButton ? <Button key="details" label="Szczegóły" onPress={() => openPane($)} /> : null}
+          {hasButton ? (
+            <Button key="details" plain onPress={() => openPane($)}>
+              <Text color="claude">≡</Text>
+            </Button>
+          ) : null}
         </Box>
         <Box paddingX={PAD} flexWrap="wrap" columnGap={2}>
           {g.segments.map((s, i) =>
@@ -254,7 +256,7 @@ export const register: Register = (on, options) => {
     if (d === null) return <Text dimColor>Liczę…</Text>
 
     const columns = e.props.bodyColumns - 2 * PAD
-    const nameWidth = Math.min(22, Math.max(...d.segments.map(s => s.name.length)))
+    const nameWidth = Math.min(28, Math.max(...d.segments.map(s => s.name.length)))
     const barWidth = Math.max(4, columns - nameWidth - 1 - 7 - 5)
     const name = (s: string, w: number) => (s.length > w ? `${s.slice(0, w - 1)}…` : s.padEnd(w))
 
@@ -286,7 +288,12 @@ export const register: Register = (on, options) => {
         </Box>
         {d.groups.map(g => (
           <Box key={`group-${g.title}`} flexDirection="column" paddingTop={1}>
-            <Text bold color="claude">{g.title}</Text>
+            <Box>
+              <Text bold color="claude">{g.title} </Text>
+              <Text dimColor>
+                · {g.items.length} · {fmt(g.items.reduce((sum, item) => sum + item.tokens, 0))}
+              </Text>
+            </Box>
             {g.items.map((item, i) => (
               <Box key={`item-${g.title}-${i}`}>
                 <Text wrap="truncate-end"> {name(item.name, columns - 8)}</Text>

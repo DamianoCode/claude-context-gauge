@@ -4,15 +4,15 @@ Mod do [Claude Code](https://claude.com/claude-code), który nad promptem pokazu
 
 ```
 
- ◆ ctx 412k/1M 41% ███▓▓▓▓▓▓▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░▒▒▒▒▒▒▒ ◷ cache 47 min [ Szczegóły ]
+ ███▓▓▓▓▓▓▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░▒▒▒▒▒▒▒ 412k/1M 41%  ◷ 47 min  ≡
  ■ system 20k  ■ narzędzia 12k  ■ wiadomości 380k  ░ wolne 423k  ▒ bufor 165k
 ```
 
 - **pasek dzielony na kategorie** z `/context` (prompt systemowy, narzędzia, MCP, pamięć, skille, wiadomości); szerokość odcinka = jego udział w oknie, `░` to wolne miejsce, `▒` bufor autokompaktowania; pod paskiem legenda z nazwą i liczbą tokenów każdej kategorii
 - **kolory z motywu CLI**: każda kategoria dostaje ten sam klucz motywu, którym rysuje ją `/context`, więc pasek zmienia się razem z `/theme` (dark, light, daltonized, ANSI)
-- **odliczanie cache** od ostatniej odpowiedzi modelu w głównym wątku: minuty, a poniżej 10 min sekundy; zielony → żółty (< 10 min) → czerwony (< 2 min) → `◌ cache zamrożony`
+- **odliczanie cache** od ostatniej odpowiedzi modelu w głównym wątku: minuty, a poniżej 10 min sekundy; zielony → żółty (< 10 min) → czerwony (< 2 min) → `◌ 0:00`, gdy cache wygasł; `◷ ●` w trakcie pracy modelu
 - **toast** kilka minut przed wygaśnięciem cache, z liczbą tokenów, które trzeba by przecachować
-- **[ Szczegóły ]** albo `/ctx` otwiera panel: każda kategoria z paskiem, tokenami i procentem, a pod spodem najwięksi „zjadacze” — pliki pamięci, serwery MCP, skille, agenci; **[ Policz dokładnie ]** liczy jak `/context` (zapytaniami o liczbę tokenów), domyślnie panel szacuje lokalnie i za darmo
+- **`≡`** albo `/ctx` otwiera panel: każda kategoria z paskiem, tokenami i procentem, a pod spodem pełne listy (z liczbą i sumą): pliki pamięci, serwery MCP, skille, agenci; **[ Policz dokładnie ]** liczy jak `/context` (zapytaniami o liczbę tokenów), domyślnie panel szacuje lokalnie i za darmo
 
 ## Ustawienia
 

@@ -31,6 +31,12 @@ const breakdown = {
     { name: 'mcp__gmail__read', serverName: 'gmail', tokens: 600, isLoaded: true },
   ],
   agents: [],
+  skills: {
+    totalSkills: 7,
+    includedSkills: 7,
+    tokens: 2_800,
+    skillFrontmatter: Array.from({ length: 7 }, (_, i) => ({ name: `skill-${i + 1}`, source: 'userSettings', tokens: 400 - i * 10 })),
+  },
   isAutoCompactEnabled: true,
   apiUsage: null,
 }
@@ -84,10 +90,10 @@ test('cells split the width by tokens and fill it exactly', () => {
 
 test('cacheView counts down in minutes, then seconds, then freezes', () => {
   expect(cacheView(null, 0, 60 * MIN).text).toMatch(/—/)
-  expect(cacheView(0, 13 * MIN, 60 * MIN)).toEqual({ text: '◷ cache 47 min', tone: 'success' })
-  expect(cacheView(0, 55 * MIN + 30_000, 60 * MIN)).toEqual({ text: '◷ cache 4:30', tone: 'warning' })
+  expect(cacheView(0, 13 * MIN, 60 * MIN)).toEqual({ text: '◷ 47 min', tone: 'success' })
+  expect(cacheView(0, 55 * MIN + 30_000, 60 * MIN)).toEqual({ text: '◷ 4:30', tone: 'warning' })
   expect(cacheView(0, 59 * MIN, 60 * MIN).tone).toBe('error')
-  expect(cacheView(0, 60 * MIN, 60 * MIN).text).toMatch(/zamrożony/)
+  expect(cacheView(0, 60 * MIN, 60 * MIN).text).toMatch(/◌ 0:00/)
 })
 
 test('the band shows usage, theme-coloured segments and the cache countdown', async ($, on) => {
@@ -105,17 +111,17 @@ test('the band shows usage, theme-coloured segments and the cache countdown', as
   expect(await ui.find({ type: 'Text', text: 'wiadomości 380k' })).toBeDefined()
   expect(await ui.find({ type: 'Text', text: 'bufor 165k' })).toBeDefined()
   expect(await ui.find({ type: 'Text', text: /MCP tools/ })).toBeUndefined()
-  expect(await ui.find({ type: 'Text', text: /cache 60 min|cache 59 min/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /◷ (60|59) min/ })).toBeDefined()
 
   await clock.advance(13 * MIN)
-  expect(await ui.find({ type: 'Text', text: /cache 47 min/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /◷ 47 min/ })).toBeDefined()
   expect(toasts).toEqual([])
   await clock.advance(43 * MIN)
-  expect(await ui.find({ type: 'Text', text: /cache 4:00/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /◷ 4:00/ })).toBeDefined()
   expect(toasts.length).toBe(1)
   expect(toasts[0]).toMatch(/400k/)
   await clock.advance(5 * MIN)
-  expect(await ui.find({ type: 'Text', text: /zamrożony/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /◌ 0:00/ })).toBeDefined()
 })
 
 test('cacheTtl 5m counts down from five minutes', { options: { cacheTtl: '5m' } }, async ($, on) => {
@@ -125,7 +131,7 @@ test('cacheTtl 5m counts down from five minutes', { options: { cacheTtl: '5m' } 
   await $.turn.complete({ ...complete, usage: cost })
   await clock.advance(MIN)
   const ui = await $.ui.mount({ plugin: 'context-gauge', surface: 'terminal', ...BAND })
-  expect(await ui.find({ type: 'Text', text: /cache 4:00/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /◷ 4:00/ })).toBeDefined()
 })
 
 test('/ctx opens a pane listing categories and top consumers', async ($, on) => {
@@ -145,5 +151,7 @@ test('/ctx opens a pane listing categories and top consumers', async ($, on) => 
   expect(await pane.find({ type: 'Text', text: /MCP tools/ })).toBeUndefined()
   expect(await pane.find({ type: 'Text', text: /Serwery MCP/ })).toBeDefined()
   expect(await pane.find({ type: 'Text', text: /gmail/ })).toBeDefined()
+  expect(await pane.find({ type: 'Text', text: /skill-7/ })).toBeDefined()
+  expect(await pane.find({ type: 'Text', text: /· 7 · 2\.6k/ })).toBeDefined()
   expect(await pane.find({ type: 'Text', text: /\.claude\/CLAUDE\.md/ })).toBeDefined()
 })
