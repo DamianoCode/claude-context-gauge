@@ -102,6 +102,9 @@ test('the band shows usage, theme-coloured segments and the cache countdown', as
   expect(await ui.find({ type: 'Text', text: /engine/ })).toBeDefined()
   expect(await ui.find({ type: 'Text', text: /^█+$/ })).toBeDefined()
   expect(await ui.find({ type: 'Text', text: /^▒+$/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: 'wiadomości 380k' })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: 'bufor 165k' })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /MCP tools/ })).toBeUndefined()
   expect(await ui.find({ type: 'Text', text: /cache 60 min|cache 59 min/ })).toBeDefined()
 
   await clock.advance(13 * MIN)

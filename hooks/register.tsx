@@ -14,6 +14,21 @@ const PAD = 1
 const MIN = 60_000
 const GLYPH = { used: '█', free: '░', buffer: '▒' } as const
 
+// Short Polish labels for the legend; a category /context adds later keeps its own name.
+const LABEL: Record<string, string> = {
+  'System prompt': 'system',
+  'System tools': 'narzędzia',
+  'MCP tools': 'MCP',
+  'Custom agents': 'agenci',
+  'Memory files': 'pamięć',
+  Skills: 'skille',
+  Messages: 'wiadomości',
+  'Free space': 'wolne',
+  'Autocompact buffer': 'bufor',
+}
+
+export const label = (name: string) => LABEL[name] ?? name
+
 const trim = (x: number) => String(Math.round(x * 10) / 10)
 
 export const fmt = (n: number): string => {
@@ -203,7 +218,7 @@ export const register: Register = (on, options) => {
     return (
       <Box flexDirection="column">
         {inner}
-        <Box paddingX={PAD}>
+        <Box paddingX={PAD} paddingTop={1}>
           <Text color="claude" bold>◆ ctx </Text>
           <Text bold>{fmt(g.used)}/{fmt(g.max)} </Text>
           <Text color={tone} bold={tone !== undefined}>{pct}% </Text>
@@ -216,6 +231,18 @@ export const register: Register = (on, options) => {
           )}
           <Text color={cache.tone}>{tail}</Text>
           {hasButton ? <Button key="details" label="Szczegóły" onPress={() => openPane($)} /> : null}
+        </Box>
+        <Box paddingX={PAD} flexWrap="wrap" columnGap={2}>
+          {g.segments.map((s, i) =>
+            s.tokens > 0 ? (
+              <Box key={`legend-${i}`}>
+                <Text color={s.color}>{s.kind === 'used' ? '■' : GLYPH[s.kind]} </Text>
+                <Text dimColor>
+                  {label(s.name)} {fmt(s.tokens)}
+                </Text>
+              </Box>
+            ) : null,
+          )}
         </Box>
       </Box>
     )

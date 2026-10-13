@@ -3,10 +3,12 @@
 Mod do [Claude Code](https://claude.com/claude-code), który nad promptem pokazuje, ile kontekstu zostało, co go zajmuje i ile czasu zostało do wygaśnięcia prompt cache.
 
 ```
+
  ◆ ctx 412k/1M 41% ███▓▓▓▓▓▓▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░▒▒▒▒▒▒▒ ◷ cache 47 min [ Szczegóły ]
+ ■ system 20k  ■ narzędzia 12k  ■ wiadomości 380k  ░ wolne 423k  ▒ bufor 165k
 ```
 
-- **pasek dzielony na kategorie** z `/context` (prompt systemowy, narzędzia, MCP, pamięć, skille, wiadomości); szerokość odcinka = jego udział w oknie, `░` to wolne miejsce, `▒` bufor autokompaktowania
+- **pasek dzielony na kategorie** z `/context` (prompt systemowy, narzędzia, MCP, pamięć, skille, wiadomości); szerokość odcinka = jego udział w oknie, `░` to wolne miejsce, `▒` bufor autokompaktowania; pod paskiem legenda z nazwą i liczbą tokenów każdej kategorii
 - **kolory z motywu CLI**: każda kategoria dostaje ten sam klucz motywu, którym rysuje ją `/context`, więc pasek zmienia się razem z `/theme` (dark, light, daltonized, ANSI)
 - **odliczanie cache** od ostatniej odpowiedzi modelu w głównym wątku: minuty, a poniżej 10 min sekundy; zielony → żółty (< 10 min) → czerwony (< 2 min) → `◌ cache zamrożony`
 - **toast** kilka minut przed wygaśnięciem cache, z liczbą tokenów, które trzeba by przecachować
