@@ -36,6 +36,7 @@ Opus 5.5 medium │ 5h ━─────── 13% ↻ 1h50 │ tydz ━━━�
 - gałąź git i zmiany względem HEAD
 - **dokładny czas wygaśnięcia cache:** Claude Code podaje go status line'owi (`prompt_cache.expires_at`, też `ttl` przy overage), skrypt zapisuje go do `~/.claude/context-gauge/<sesja>.json`, a mod odlicza od niego zamiast szacować
 - `--chain "<komenda>"` przekazuje to samo wejście innemu status line'owi (np. ClaudeWidget), więc ten dalej dostaje swoje dane; jego wydruk jest pomijany
+- z ClaudeWidget nie używaj `--chain`: wpisz samą komendę `node …/statusline.mjs`, a widżet przy starcie sam dopnie przed nią swój przekaźnik (`{ …/ClaudeWidgetRelay.exe tee || cat; } 2>/dev/null | node …`) i nie nadpisze jej przy aktualizacji
 
 W `~/.claude/settings.json`:
 
