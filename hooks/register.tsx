@@ -1,11 +1,12 @@
 import { atom, read, update } from 'claude-code'
 import type { ContextBreakdownDetail, EngineInterface, Register, SessionContextBreakdown, SessionUsage, Timer } from 'claude-code'
 
-import type { Consumer, Details, Gauge, Segment } from '../types'
+import type { Consumer, Details, Gauge, Segment, SharedCache } from '../types'
 
 const gauge = atom({ plugin: 'context-gauge', key: 'gauge' } as const, null)
 const details = atom({ plugin: 'context-gauge', key: 'details' } as const, null)
 const lastResponseAt = atom({ plugin: 'context-gauge', key: 'lastResponseAt' } as const, null)
+const shared = atom({ plugin: 'context-gauge', key: 'shared' } as const, null)
 const now = atom({ plugin: 'context-gauge', key: 'now' } as const, 0)
 const warnedAt = atom({ plugin: 'context-gauge', key: 'warnedAt' } as const, null)
 
@@ -54,9 +55,18 @@ export const cells = (segments: Segment[], width: number): number[] => {
   return out
 }
 
-export const cacheView = (last: number | null, t: number, ttlMs: number) => {
-  if (last === null) return { text: '◷ —', tone: 'inactive' }
-  const left = last + ttlMs - t
+// When the cache expires: the engine's own figure, which the status line script shares, unless
+// it predates the last response; else that response plus the TTL. 0 is a cold cache.
+export const expiryOf = (last: number | null, ttlMs: number, cache: SharedCache | null): number | null => {
+  if (cache !== null && (last === null || cache.writtenAt >= last - 5000)) {
+    return cache.warm && cache.expiresAt !== null ? cache.expiresAt : 0
+  }
+  return last === null ? null : last + ttlMs
+}
+
+export const cacheView = (expiresAt: number | null, t: number) => {
+  if (expiresAt === null) return { text: '◷ —', tone: 'inactive' }
+  const left = expiresAt - t
   if (left <= 0) return { text: '◌ 0:00', tone: 'inactive' }
   const s = Math.ceil(left / 1000)
   const time = left >= 10 * MIN ? `${Math.floor(left / MIN)} min` : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
@@ -126,16 +136,30 @@ async function openPane($: EngineInterface) {
 }
 
 // Writes `now` only when the countdown text would change, so the band redraws once a minute, then once a second.
+async function readShared($: EngineInterface): Promise<SharedCache | null> {
+  try {
+    const dir = (await $.env.get('CLAUDE_CONFIG_DIR')) ?? `${(await $.env.get('USERPROFILE')) ?? (await $.env.get('HOME'))}/.claude`
+    const file = JSON.parse(await $.fs.read(`${dir}/context-gauge/${await $.session.id()}.json`)) as Partial<SharedCache>
+    if (typeof file.writtenAt !== 'number') return null
+    return { warm: file.warm === true, expiresAt: typeof file.expiresAt === 'number' ? file.expiresAt : null, writtenAt: file.writtenAt }
+  } catch {
+    // No status line script: the countdown estimates.
+    return null
+  }
+}
+
 async function tick($: EngineInterface, ttlMs: number, warnMs: number) {
   const t = await $.clock.now()
-  const last = await read($, lastResponseAt)
-  const before = cacheView(last, await read($, now), ttlMs).text
-  if (cacheView(last, t, ttlMs).text !== before) await update($, now, () => t)
+  const cache = await readShared($)
+  if (cache !== null && cache.writtenAt !== (await read($, shared))?.writtenAt) await update($, shared, () => cache)
+  const expiresAt = expiryOf(await read($, lastResponseAt), ttlMs, await read($, shared))
+  const before = cacheView(expiresAt, await read($, now)).text
+  if (cacheView(expiresAt, t).text !== before) await update($, now, () => t)
 
-  if (warnMs === 0 || last === null || isWorking) return
-  const left = last + ttlMs - t
-  if (left > 0 && left <= warnMs && (await read($, warnedAt)) !== last) {
-    await update($, warnedAt, () => last)
+  if (warnMs === 0 || expiresAt === null || isWorking) return
+  const left = expiresAt - t
+  if (left > 0 && left <= warnMs && (await read($, warnedAt)) !== expiresAt) {
+    await update($, warnedAt, () => expiresAt)
     const g = await read($, gauge)
     const size = g ? ` (${fmt(g.used)} tokenów)` : ''
     $.ui.toast(`Cache wygaśnie za ${Math.ceil(left / MIN)} min. Napisz coś teraz, żeby nie przecachowywać kontekstu${size}.`)
@@ -204,7 +228,7 @@ export const register: Register = (on, options) => {
     const { Box, Text, Button } = $.ui.resolve(e)
     const cache = e.props.isWorking
       ? { text: '◷ ●', tone: 'success' }
-      : cacheView(await read($, lastResponseAt), await read($, now), ttlMs)
+      : cacheView(expiryOf(await read($, lastResponseAt), ttlMs, await read($, shared)), await read($, now))
     const pct = Math.round((g.used / g.max) * 100)
     const tone = pct >= 90 ? 'error' : pct >= 70 ? 'warning' : undefined
 

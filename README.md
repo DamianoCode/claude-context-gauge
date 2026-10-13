@@ -23,9 +23,32 @@ W `/config` (albo `pluginConfigs` w settings):
 | `cacheTtl` | `1h` | czas życia cache; `5m`, gdy sesja jest w overage i cache spada do 5 minut |
 | `warnMinutes` | `5` | ile minut przed wygaśnięciem pokazać toast; `0` wyłącza |
 
+## Status line (opcjonalnie)
+
+`statusline/statusline.mjs` to jednoliniowy status line w kolorach motywu (czyta `theme` z settings, a dla `custom:*` plik z `~/.claude/themes`):
+
+```
+Opus 5.5 medium │ 5h ━─────── 13% ↻1h50 │ tydz ━━━━──── 47% ↻2d17h │ ⎇ main +42 −7 │ $4.96
+```
+
+- model i poziom effort
+- limity 5h i tygodniowy; kolor według tempa: żółty/czerwony, gdy przy obecnym tempie limit skończy się przed resetem
+- gałąź git i zmiany względem HEAD, koszt sesji
+- **dokładny czas wygaśnięcia cache:** Claude Code podaje go status line'owi (`prompt_cache.expires_at`, też `ttl` przy overage), skrypt zapisuje go do `~/.claude/context-gauge/<sesja>.json`, a mod odlicza od niego zamiast szacować
+- `--chain "<komenda>"` przekazuje to samo wejście innemu status line'owi (np. ClaudeWidget), więc ten dalej dostaje swoje dane; jego wydruk jest pomijany
+
+W `~/.claude/settings.json`:
+
+```json
+"statusLine": {
+  "type": "command",
+  "command": "node <ścieżka>/statusline/statusline.mjs --chain \"<poprzednia komenda status line>\""
+}
+```
+
 ## Ograniczenia
 
-- Moment wygaśnięcia cache to szacunek po stronie klienta: API nie zwraca godziny wygaśnięcia, mod liczy od ostatniej odpowiedzi + TTL.
+- Bez status line'a z tego repo moment wygaśnięcia cache to szacunek: ostatnia odpowiedź + TTL. Ze skryptem mod czyta dokładną godzinę od Claude Code.
 - Subagenci mają własny cache; licznik dotyczy głównej rozmowy. Po `/clear` i kompaktowaniu licznik startuje od nowa.
 - Procent liczony jest względem okna autokompaktowania, bo to ono decyduje, kiedy zrobi się ciasno.
 

@@ -1,7 +1,7 @@
 import type { On } from 'claude-code'
 import { expect, mock, test } from 'claude-code/testing'
 
-import { cacheView, cells, fmt } from '../hooks/register'
+import { cacheView, cells, expiryOf, fmt } from '../hooks/register'
 
 const BAND = {
   component: 'AbovePrompt',
@@ -50,13 +50,15 @@ const usage = () => ({
 const start = { cwd: '.', surface: 'terminal', isInteractive: true } as const
 
 // The engine beneath the plugin: a session, its turns and its usage figures.
-const world = (on: On) => {
+const world = (on: On, read: (path: string) => object = () => ({ deny: 'ENOENT' })) => {
   const toasts: string[] = []
   on('session.start', () => ({ cwd: '.' }))
   on('turn.complete', () => ({ text: 'ok' }))
   on('session.usage', () => ({ value: usage() }) as never)
   on('command.register', (_, e) => ({ value: { command: e.name } }))
   on('ui.open', () => ({ value: { isPlaced: true } }))
+  on('session.id', () => ({ value: 's1' }))
+  on('fs.read', (_, e) => read(String((e as { path: string }).path)) as never)
   on('ui.toast', (_, e) => {
     toasts.push(e.text)
     return { value: undefined }
@@ -89,11 +91,20 @@ test('cells split the width by tokens and fill it exactly', () => {
 })
 
 test('cacheView counts down in minutes, then seconds, then freezes', () => {
-  expect(cacheView(null, 0, 60 * MIN).text).toMatch(/—/)
-  expect(cacheView(0, 13 * MIN, 60 * MIN)).toEqual({ text: '◷ 47 min', tone: 'success' })
-  expect(cacheView(0, 55 * MIN + 30_000, 60 * MIN)).toEqual({ text: '◷ 4:30', tone: 'warning' })
-  expect(cacheView(0, 59 * MIN, 60 * MIN).tone).toBe('error')
-  expect(cacheView(0, 60 * MIN, 60 * MIN).text).toMatch(/◌ 0:00/)
+  const at = 60 * MIN
+  expect(cacheView(null, 0).text).toMatch(/—/)
+  expect(cacheView(at, 13 * MIN)).toEqual({ text: '◷ 47 min', tone: 'success' })
+  expect(cacheView(at, 55 * MIN + 30_000)).toEqual({ text: '◷ 4:30', tone: 'warning' })
+  expect(cacheView(at, 59 * MIN).tone).toBe('error')
+  expect(cacheView(at, 60 * MIN).text).toMatch(/◌ 0:00/)
+})
+
+test('expiryOf prefers the engine figure the status line shares, unless it is older than the last response', () => {
+  const warm = { warm: true, expiresAt: 3_000_000, writtenAt: 1_000_000 }
+  expect(expiryOf(1_000_000, 60 * MIN, warm)).toBe(3_000_000)
+  expect(expiryOf(1_000_000, 60 * MIN, { ...warm, warm: false })).toBe(0)
+  expect(expiryOf(2_000_000, 60 * MIN, warm)).toBe(2_000_000 + 60 * MIN)
+  expect(expiryOf(null, 60 * MIN, null)).toBeNull()
 })
 
 test('the band shows usage, theme-coloured segments and the cache countdown', async ($, on) => {
@@ -154,4 +165,20 @@ test('/ctx opens a pane listing categories and top consumers', async ($, on) => 
   expect(await pane.find({ type: 'Text', text: /skill-7/ })).toBeDefined()
   expect(await pane.find({ type: 'Text', text: /· 7 · 2\.6k/ })).toBeDefined()
   expect(await pane.find({ type: 'Text', text: /\.claude\/CLAUDE\.md/ })).toBeDefined()
+})
+
+test('the countdown follows the expiry the status line script shares', async ($, on) => {
+  const clock = mock.clock(on, { now: 0 })
+  mock.env(on, { USERPROFILE: 'C:/Users/me' })
+  const paths: string[] = []
+  world(on, path => {
+    paths.push(path)
+    return { value: JSON.stringify({ warm: true, expiresAt: 20 * MIN, writtenAt: 1_000 }) }
+  })
+  await $.session.start(start)
+  await $.turn.complete({ ...complete, usage: cost })
+  await clock.advance(2_000)
+  const ui = await $.ui.mount({ plugin: 'context-gauge', surface: 'terminal', ...BAND })
+  expect(await ui.find({ type: 'Text', text: /◷ 19 min/ })).toBeDefined()
+  expect(paths[0]?.replaceAll('\\', '/')).toBe('C:/Users/me/.claude/context-gauge/s1.json')
 })
