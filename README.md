@@ -28,12 +28,12 @@ W `/config` (albo `pluginConfigs` w settings):
 `statusline/statusline.mjs` to jednoliniowy status line w kolorach motywu (czyta `theme` z settings, a dla `custom:*` plik z `~/.claude/themes`):
 
 ```
-Opus 5.5 medium │ 5h ━─────── 13% ↻1h50 │ tydz ━━━━──── 47% ↻2d17h │ ⎇ main +42 −7 │ $4.96
+Opus 5.5 medium │ 5h ━─────── 13% ↻ 1h50 │ tydz ━━━━──── 47% ↻ 2d17h │ ⎇ main +42 −7
 ```
 
 - model i poziom effort
 - limity 5h i tygodniowy; kolor według tempa: żółty/czerwony, gdy przy obecnym tempie limit skończy się przed resetem
-- gałąź git i zmiany względem HEAD, koszt sesji
+- gałąź git i zmiany względem HEAD
 - **dokładny czas wygaśnięcia cache:** Claude Code podaje go status line'owi (`prompt_cache.expires_at`, też `ttl` przy overage), skrypt zapisuje go do `~/.claude/context-gauge/<sesja>.json`, a mod odlicza od niego zamiast szacować
 - `--chain "<komenda>"` przekazuje to samo wejście innemu status line'owi (np. ClaudeWidget), więc ten dalej dostaje swoje dane; jego wydruk jest pomijany
 

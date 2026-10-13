@@ -111,9 +111,6 @@ function line(d, colors) {
   const git = branch(d.workspace?.current_dir ?? d.cwd)
   if (git) parts.push(git(c))
 
-  const usd = d.cost?.total_cost_usd
-  if (typeof usd === 'number') parts.push(c('inactive', `$${usd.toFixed(2)}`))
-
   return parts.join(sep)
 }
 
@@ -125,7 +122,7 @@ function meter(c, label, { used_percentage: used = 0, resets_at: resetsAt }, win
   const elapsed = windowSeconds - left
   const pace = elapsed > windowSeconds * 0.05 ? (used / elapsed) * windowSeconds : used
   const tone = used >= 90 || pace >= 130 ? 'error' : pace >= 100 ? 'warning' : 'success'
-  const reset = left > 0 ? c('subtle', ` ↻${duration(left)}`) : ''
+  const reset = left > 0 ? c('subtle', ` ↻ ${duration(left)}`) : ''
   return `${c('inactive', label)} ${c(tone, '━'.repeat(filled))}${c('subtle', '─'.repeat(width - filled))} ${c(tone, `${Math.round(used)}%`)}${reset}`
 }
 
