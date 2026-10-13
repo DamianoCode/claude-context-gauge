@@ -1,0 +1,24 @@
+{
+  "name": "context-gauge",
+  "version": "0.1.0",
+  "description": "Band above the prompt showing context usage by category and the prompt-cache countdown",
+  "author": { "name": "Damian Ułaś", "url": "https://github.com/DamianoCode" },
+  "repository": "https://github.com/DamianoCode/claude-context-gauge",
+  "license": "MIT",
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "cacheTtl": {
+      "type": "string",
+      "title": "Prompt cache TTL",
+      "description": "How long the prompt cache lives after the last response (1h normally, 5m under usage overage)",
+      "options": ["1h", "5m"],
+      "default": "1h"
+    },
+    "warnMinutes": {
+      "type": "number",
+      "title": "Warn before cache expiry (minutes)",
+      "description": "Toast this many minutes before the cache expires; 0 turns the toast off",
+      "default": 5
+    }
+  }
+}

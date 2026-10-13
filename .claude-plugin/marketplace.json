@@ -1,0 +1,13 @@
+{
+  "name": "claude-context-gauge",
+  "description": "Context usage and prompt-cache gauge for Claude Code",
+  "owner": {
+    "name": "Damian Ułaś"
+  },
+  "plugins": [
+    {
+      "name": "context-gauge",
+      "source": "./"
+    }
+  ]
+}
